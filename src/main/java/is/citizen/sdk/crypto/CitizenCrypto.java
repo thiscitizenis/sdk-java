@@ -33,7 +33,7 @@ import java.util.*;
 public class CitizenCrypto {
     private final String CRYPTO_ALGORITHM = "RSA";
     private final int CRYPTO_KEY_SIZE = 2048;
-    private final String CRYPTO_PRIVATE_KEY_ENCRYPTION_ALGO = "AES-256-GCM";
+    private final String CRYPTO_PRIVATE_KEY_ENCRYPTION_ALGO = "AES-256-CBC";
     private final String AUTH_ALGORITHM = "ECDSA";
     private final String AUTH_CURVE = "secp256r1";
     private final String AUTH_SIGNATURE_ALGORITHM = "SHA256withECDSA";
@@ -376,7 +376,7 @@ public class CitizenCrypto {
      *
      * @throws IOException
      */
-    private String encryptPrivateKey(PrivateKey key, String secret) throws IOException {
+     public String encryptPrivateKey(PrivateKey key, String secret) throws IOException {
         StringWriter keyWriter = new StringWriter();
 
         JcePEMEncryptorBuilder builder = new JcePEMEncryptorBuilder(CRYPTO_PRIVATE_KEY_ENCRYPTION_ALGO);

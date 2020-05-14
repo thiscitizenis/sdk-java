@@ -13,10 +13,13 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.UUID;
 
 public class Examples {
@@ -613,7 +616,7 @@ public class Examples {
         System.out.println("********************************");
     }
 
-    public static void generateAuthKeyPair(String password) {
+    public static void generateAuthKeyPair() {
         CitizenApi citizenApi = new CitizenApi();
         citizenApi.registerLoggingCallback((status, message) -> {
             if (status == Constant.CITIZEN_CRYPTO_ERROR) {
@@ -621,7 +624,10 @@ public class Examples {
             }
         });
 
-        KeyHolder keyHolder = citizenApi.generateAuthKeyPair(password)
+        System.out.println("Enter key password");
+        String secret = new String(System.console().readPassword());
+
+        KeyHolder keyHolder = citizenApi.generateAuthKeyPair(secret)
             .orElseThrow(CitizenApiException::new);
 
         String publicKey = keyHolder.getPublicKey();
@@ -634,7 +640,7 @@ public class Examples {
         System.out.println(privateKey);
     }
 
-    public static void generateCryptoKeyPair(String password) {
+    public static void generateCryptoKeyPair() {
         CitizenApi citizenApi = new CitizenApi();
         citizenApi.registerLoggingCallback((status, message) -> {
             if (status == Constant.CITIZEN_CRYPTO_ERROR) {
@@ -642,7 +648,10 @@ public class Examples {
             }
         });
 
-        KeyHolder keyHolder = citizenApi.generateCryptoKeyPair(password)
+        System.out.println("Enter key password");
+        String secret = new String(System.console().readPassword());
+
+        KeyHolder keyHolder = citizenApi.generateCryptoKeyPair(secret)
             .orElseThrow(CitizenApiException::new);
 
         String publicKey = keyHolder.getPublicKey();
@@ -655,18 +664,43 @@ public class Examples {
         System.out.println(privateKey);
     }
 
+    public static void updateCryptoKey(String keyFile) throws FileNotFoundException {
+        CitizenApi citizenApi = new CitizenApi();
+        citizenApi.registerLoggingCallback((status, message) -> {
+            if (status == Constant.CITIZEN_CRYPTO_ERROR) {
+                System.out.println("Log: status: " + status + ", message: " + message);
+            }
+        });
+
+        Scanner scanner = new Scanner(new File(keyFile));
+        // String encodedPrivateKey = scanner.useDelimiter("\\A").next();
+        String encodedPrivateKey = scanner.next();
+        scanner.close();
+
+        System.out.println("Enter key password");
+        String secret = new String(System.console().readPassword());
+
+        String reEncryptedPrivateKey = citizenApi.reEncryptPrivateKeyString(encodedPrivateKey, secret)
+                .orElseThrow(CitizenApiException::new);
+
+        System.out.println("Crypto Private Key:");
+        System.out.println(reEncryptedPrivateKey);
+    }
+
     public static void usage() {
-        System.err.println("Usage: -runExamples | -authKey <secret> | -cryptoKey <secret>");
+        System.err.println("Usage: --runExamples | --authKey | --cryptoKey | --updateCryptoKey <file>");
     }
 
     public static void main(String[] args) {
 
         Options options = new Options();
 
-        Option authKey = new Option("a", "authKey", true, "auth key secret");
+        Option authKey = new Option("a", "authKey", false, "generate authentication key");
         options.addOption(authKey);
-        Option cryptoKey = new Option("c", "cryptoKey", true, "crypto key secret");
+        Option cryptoKey = new Option("c", "cryptoKey", false, "generate crypto key");
         options.addOption(cryptoKey);
+        Option updateCrytoKey = new Option("u", "updateCryptoKey", true, "crypto key file");
+        options.addOption(updateCrytoKey);
         Option runExamples = new Option("runExamples", "run examples");
         Option help = new Option("h", "help", false, "display help");
         options.addOption(help);
@@ -676,16 +710,13 @@ public class Examples {
         try {
             CommandLine line = parser.parse( options, args );
             if (line.hasOption("authKey")) {
-                String secret = line.getOptionValue("authKey");
-                if (secret != null) {
-                    generateAuthKeyPair(secret);
-                } else {
-                    System.err.println("Secret for auth key must be given");
-                }
+                generateAuthKeyPair();
             } else if (line.hasOption("cryptoKey")) {
-                String secret = line.getOptionValue("cryptoKey");
-                if (secret != null) {
-                    generateCryptoKeyPair(secret);
+                generateCryptoKeyPair();
+            } else if (line.hasOption("updateCryptoKey")) {
+                String keyFile = line.getOptionValue("updateCryptoKey");
+                if (keyFile != null) {
+                    updateCryptoKey(keyFile);
                 } else {
                     System.err.println("Secret for crypto key must be given");
                 }
@@ -698,7 +729,9 @@ public class Examples {
                 usage();
             }
         } catch (ParseException e) {
-            System.err.println("Arugment parsing failed: " + e.getMessage());
+            System.err.println("Argument parsing failed: " + e.getMessage());
+        } catch (FileNotFoundException e) {
+            System.err.println("File not found: " + e.getMessage());
         }
     }
 }
