@@ -15,6 +15,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.joda.time.DateTime;
 import org.springframework.web.client.HttpStatusCodeException;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
@@ -185,6 +186,27 @@ public class CitizenApi implements WebStompClient.LoggingCallback {
             PrivateKey privateKey = citizenCrypto.getPrivateCryptoKeyFromEncodedEncryptedString(privateKeyString, password);
             return Optional.of(privateKey);
         } catch (CryptoException e) {
+            log(Constant.CITIZEN_CRYPTO_ERROR, getStackTrace(e));
+        }
+
+        return Optional.empty();
+    }
+
+    /**
+     * Re-encrypt a private key (used to change from GCM to CBC as the latter has better support)
+     *
+     * @param privateKeyString encrypted crypto private key.
+     * @param password password for the encrypted private key
+     *
+     * @return Optional {@link String} updated private key or empty Optional upon error.
+     */
+    public Optional<String> reEncryptPrivateKeyString(String privateKeyString, String password) {
+
+        try {
+            PrivateKey decryptedPrivateKey = citizenCrypto.getPrivateCryptoKeyFromEncodedEncryptedString(privateKeyString, password);
+            String encryptedPrivateKey = citizenCrypto.encryptPrivateKey(decryptedPrivateKey, password);
+            return Optional.of(encryptedPrivateKey);
+        } catch (CryptoException | IOException e) {
             log(Constant.CITIZEN_CRYPTO_ERROR, getStackTrace(e));
         }
 
